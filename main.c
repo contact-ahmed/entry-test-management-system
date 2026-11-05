@@ -5,6 +5,10 @@
 
 int main()
 {
+
+    loadStudents();
+
+
     int choice;
 
     do
