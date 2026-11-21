@@ -3,8 +3,8 @@
 
 void registerStudent(void);
 void studentLogin(void);
-void ViewMyProfile(void);
 void studentMenu(void);
+void ViewMyProfile(void);
 void loadStudents(void);
 void saveStudents(void);
 
