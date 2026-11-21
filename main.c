@@ -28,6 +28,12 @@ int main(void)
             continue;
         }
 
+        /* Consume the newline left by scanf before calling line-based menus. */
+        {
+            int ch;
+            while ((ch = getchar()) != '\n' && ch != EOF) {}
+        }
+
         switch (choice)
         {
             case 1:
