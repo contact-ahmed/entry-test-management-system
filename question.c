@@ -29,6 +29,25 @@ static int readLine(char text[], int size)
     return 1;
 }
 
+static int readFileLine(FILE *fp, char text[], int size)
+{
+    size_t length;
+    int ch;
+
+    if (fgets(text, size, fp) == NULL)
+        return 0;
+
+    length = strlen(text);
+    if (length > 0 && text[length - 1] == '\n')
+        text[length - 1] = '\0';
+    else
+    {
+        while ((ch = fgetc(fp)) != '\n' && ch != EOF) {}
+    }
+
+    return 1;
+}
+
 static int readNumber(const char *message, int *number)
 {
     char line[30];
@@ -122,20 +141,20 @@ void loadQuestions(void)
 
     while (questionCount < MAX_QUESTIONS)
     {
-        if (!readLine(questions[questionCount], sizeof(questions[questionCount])))
+        if (!readFileLine(fp, questions[questionCount], sizeof(questions[questionCount])))
             break;
         if (questions[questionCount][0] == '\0')
             break;
 
         for (j = 0; j < 4; j++)
         {
-            if (!readLine(options[questionCount][j], sizeof(options[questionCount][j])))
+            if (!readFileLine(fp, options[questionCount][j], sizeof(options[questionCount][j])))
                 break;
         }
         if (j != 4)
             break;
 
-        if (!readLine(answer, sizeof(answer)))
+        if (!readFileLine(fp, answer, sizeof(answer)))
             break;
 
         answer[0] = (char)toupper((unsigned char)answer[0]);
