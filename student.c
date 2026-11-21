@@ -1,10 +1,13 @@
-
 #include <stdio.h>
 #include <string.h>
 #include "student.h"
+#include "test.h"
 
 #define MAX_STUDENTS 100
+#define STUDENTS_FILE "students.txt"
+#define RESULTS_FILE "results.txt"
 
+/* Student records */
 char studentName[MAX_STUDENTS][50];
 char studentUsername[MAX_STUDENTS][30];
 char studentPassword[MAX_STUDENTS][30];
@@ -13,57 +16,96 @@ int studentIDs[MAX_STUDENTS];
 int totalStudents = 0;
 int currentStudentIndex = -1;
 
-void saveStudents(void);
-void loadStudents(void);
+/* Private helper functions */
+static void clearInputBuffer(void);
+static int usernameExists(const char username[]);
+static void viewMyResults(void);
 
+/* Remove any extra characters left in the input buffer */
+static void clearInputBuffer(void)
+{
+    int ch;
+
+    while ((ch = getchar()) != '\n' && ch != EOF)
+    {
+    }
+}
+
+/* Check whether a username is already registered */
+static int usernameExists(const char username[])
+{
+    int i;
+
+    for (i = 0; i < totalStudents; i++)
+    {
+        if (strcmp(studentUsername[i], username) == 0)
+        {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+/* Student Registration */
 void registerStudent(void)
 {
-    char names[50];
-    char usernames[30];
-    char passwords[30];
-    int i;
+    char name[50];
+    char username[30];
+    char password[30];
 
     printf("\n====== STUDENT REGISTRATION ======\n");
 
     if (totalStudents >= MAX_STUDENTS)
     {
-        printf("Registration limit reached. Cannot register.\n");
+        printf("Registration limit reached. Cannot register more students.\n");
         return;
     }
 
     printf("Enter Student Name: ");
-    scanf(" %49[^\n]", names);
+    if (scanf(" %49[^\n]", name) != 1)
+    {
+        printf("Invalid name. Registration cancelled.\n");
+        return;
+    }
 
     printf("Create a Username: ");
-    scanf("%29s", usernames);
-
-    // Check if username already exists
-    for (i = 0; i < totalStudents; i++)
+    if (scanf("%29s", username) != 1)
     {
-        if (strcmp(studentUsername[i], usernames) == 0)
-        {
-            printf("Username already exists. Please choose another.\n");
-            return;
-        }
+        printf("Invalid username. Registration cancelled.\n");
+        return;
+    }
+
+    if (usernameExists(username))
+    {
+        printf("Username already exists. Please choose another.\n");
+        return;
     }
 
     printf("Create a Password: ");
-    scanf("%29s", passwords);
+    if (scanf("%29s", password) != 1)
+    {
+        printf("Invalid password. Registration cancelled.\n");
+        return;
+    }
 
+    /* Assign an ID and store the new student's details */
     studentIDs[totalStudents] = 1001 + totalStudents;
 
-    strcpy(studentName[totalStudents], names);
-    strcpy(studentUsername[totalStudents], usernames);
-    strcpy(studentPassword[totalStudents], passwords);
-
-    printf("\nRegistration Successful!\n");
-    printf("Your Student ID is: %d\n", studentIDs[totalStudents]);
+    strcpy(studentName[totalStudents], name);
+    strcpy(studentUsername[totalStudents], username);
+    strcpy(studentPassword[totalStudents], password);
 
     totalStudents++;
 
+    /* Save all registered students so records remain after program exit */
     saveStudents();
+
+    printf("\nRegistration Successful!\n");
+    printf("Your Student ID is: %d\n", studentIDs[totalStudents - 1]);
 }
 
+/* Student Login */
 void studentLogin(void)
 {
     char username[30];
@@ -80,40 +122,57 @@ void studentLogin(void)
     }
 
     printf("Enter Username: ");
-    scanf("%29s", username);
+    if (scanf("%29s", username) != 1)
+    {
+        printf("Invalid username.\n");
+        return;
+    }
 
     printf("Enter Password: ");
-    scanf("%29s", password);
+    if (scanf("%29s", password) != 1)
+    {
+        printf("Invalid password.\n");
+        return;
+    }
 
+    /* Match the entered credentials with saved student records */
     for (i = 0; i < totalStudents; i++)
     {
         if (strcmp(studentUsername[i], username) == 0 &&
             strcmp(studentPassword[i], password) == 0)
         {
-            found = 1;
             currentStudentIndex = i;
+            found = 1;
             break;
         }
     }
 
-    if (found == 1)
+    if (found)
     {
-        printf("\nLogin Successful! Welcome %s\n",
+        printf("\nLogin Successful! Welcome, %s.\n",
                studentName[currentStudentIndex]);
 
         studentMenu();
 
+        /* Clear the active session after logout */
         currentStudentIndex = -1;
     }
     else
     {
-        printf("Invalid Username or Password.\n");
+        printf("\nInvalid Username or Password.\n");
     }
 }
 
+/* Student Menu */
 void studentMenu(void)
 {
     int choice;
+
+    if (currentStudentIndex == -1)
+    {
+        printf("\nPlease log in first.\n");
+        return;
+    }
 
     do
     {
@@ -122,18 +181,24 @@ void studentMenu(void)
         printf("2. View My Results\n");
         printf("3. View My Profile\n");
         printf("4. Logout\n");
-
         printf("Enter Your Choice: ");
-        scanf("%d", &choice);
+
+        if (scanf("%d", &choice) != 1)
+        {
+            printf("\nInvalid input! Please enter a number from 1 to 4.\n");
+            clearInputBuffer();
+            continue;
+        }
 
         switch (choice)
         {
             case 1:
-                printf("Take Test Selected\n");
+                /* Pass the logged-in student's ID to the test module */
+                takeTest(studentIDs[currentStudentIndex]);
                 break;
 
             case 2:
-                printf("View My Results Selected\n");
+                viewMyResults();
                 break;
 
             case 3:
@@ -151,7 +216,7 @@ void studentMenu(void)
     } while (choice != 4);
 }
 
-// View student profile
+/* View the profile of the currently logged-in student */
 void ViewMyProfile(void)
 {
     if (currentStudentIndex == -1)
@@ -161,24 +226,78 @@ void ViewMyProfile(void)
     }
 
     printf("\n====== MY PROFILE ======\n");
-    printf("Student ID: %d\n", studentIDs[currentStudentIndex]);
-    printf("Name: %s\n", studentName[currentStudentIndex]);
-    printf("Username: %s\n", studentUsername[currentStudentIndex]);
+    printf("Student ID : %d\n", studentIDs[currentStudentIndex]);
+    printf("Name       : %s\n", studentName[currentStudentIndex]);
+    printf("Username   : %s\n", studentUsername[currentStudentIndex]);
 }
 
-void saveStudents(void)
+/* Display only the results belonging to the logged-in student */
+static void viewMyResults(void)
 {
     FILE *fp;
+    int studentID;
+    int score;
+    int total;
+    float percentage;
+    int found = 0;
 
-    fp = fopen("students.txt", "w");
-
-    if (fp == NULL)
+    if (currentStudentIndex == -1)
     {
-        printf("Error opening student file!\n");
+        printf("\nPlease log in first!\n");
         return;
     }
 
-    for (int i = 0; i < totalStudents; i++)
+    fp = fopen(RESULTS_FILE, "r");
+
+    printf("\n====== MY TEST RESULTS ======\n");
+
+    if (fp == NULL)
+    {
+        printf("You have not attempted any tests yet.\n");
+        return;
+    }
+
+    while (fscanf(fp, "%d|%d|%d|%f",
+                  &studentID, &score, &total, &percentage) == 4)
+    {
+        if (studentID == studentIDs[currentStudentIndex])
+        {
+            found = 1;
+            printf("\nStudent ID      : %d\n", studentID);
+            printf("Correct Answers : %d\n", score);
+            printf("Total Questions : %d\n", total);
+            printf("Percentage      : %.1f%%\n", percentage);
+
+            if (percentage >= 50.0f)
+                printf("Status          : PASS\n");
+            else
+                printf("Status          : NEEDS IMPROVEMENT\n");
+        }
+    }
+
+    fclose(fp);
+
+    if (!found)
+    {
+        printf("You have not attempted any tests yet.\n");
+    }
+}
+
+/* Save all student records to the data file */
+void saveStudents(void)
+{
+    FILE *fp;
+    int i;
+
+    fp = fopen(STUDENTS_FILE, "w");
+
+    if (fp == NULL)
+    {
+        printf("\nError: Could not save student records.\n");
+        return;
+    }
+
+    for (i = 0; i < totalStudents; i++)
     {
         fprintf(fp, "%d\n%s\n%s\n%s\n",
                 studentIDs[i],
@@ -188,23 +307,26 @@ void saveStudents(void)
     }
 
     fclose(fp);
-
-    printf("Student data saved successfully!\n");
 }
 
+/* Load student records when the program starts */
 void loadStudents(void)
 {
     FILE *fp;
 
-    fp = fopen("students.txt", "r");
+    fp = fopen(STUDENTS_FILE, "r");
 
     if (fp == NULL)
     {
+        /* The file will be created automatically on first registration */
+        totalStudents = 0;
         return;
     }
 
+    totalStudents = 0;
+
     while (totalStudents < MAX_STUDENTS &&
-           fscanf(fp, "%d\n%49[^\n]\n%29s\n%29s\n",
+           fscanf(fp, "%d\n%49[^\n]\n%29s\n%29s",
                   &studentIDs[totalStudents],
                   studentName[totalStudents],
                   studentUsername[totalStudents],
@@ -214,6 +336,4 @@ void loadStudents(void)
     }
 
     fclose(fp);
-
-    printf("Student data loaded successfully!\n");
 }
