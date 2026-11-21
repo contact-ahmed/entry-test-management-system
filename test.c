@@ -4,35 +4,29 @@
 #include <ctype.h>
 #include <time.h>
 #include "test.h"
+#include "question.h"
+#include "result.h"
 
-#define TEST_SIZE    10
-#define MAX_BANK     200
-#define RESULTS_FILE "results.txt"
+#define TEST_SIZE 10
 
-/* The question bank is defined in admin.c */
-extern char questions[][200];
-extern char options[][4][100];
-extern char correctAnswer[];
-extern int  questionCount;
-
-static void shuffle(int arr[], int n)
+static void shuffle(int order[], int size)
 {
     int i, j, temp;
 
-    for (i = n - 1; i > 0; i--)
+    for (i = size - 1; i > 0; i--)
     {
         j = rand() % (i + 1);
-        temp = arr[i];
-        arr[i] = arr[j];
-        arr[j] = temp;
+        temp = order[i];
+        order[i] = order[j];
+        order[j] = temp;
     }
 }
 
 static char readAnswer(void)
 {
-    char line[50];
+    char line[30];
     char *p;
-    char c;
+    char answer;
     int ch;
 
     while (1)
@@ -43,13 +37,8 @@ static char readAnswer(void)
             return 'X';
 
         if (strchr(line, '\n') == NULL)
-        {
-            while ((ch = getchar()) != '\n' && ch != EOF)
-            {
-            }
-        }
+            while ((ch = getchar()) != '\n' && ch != EOF) {}
 
-        /* skip spaces at the start */
         p = line;
         while (*p == ' ' || *p == '\t')
             p++;
@@ -57,98 +46,76 @@ static char readAnswer(void)
         if (*p == '\n' || *p == '\0')
             continue;
 
-        c = (char)toupper((unsigned char)*p);
-        p++;
-
-        /* only spaces may come after the letter */
+        answer = (char)toupper((unsigned char)*p++);
         while (*p == ' ' || *p == '\t')
             p++;
 
-        if ((c >= 'A' && c <= 'D') && (*p == '\n' || *p == '\0'))
-            return c;
+        if (answer >= 'A' && answer <= 'D' && (*p == '\n' || *p == '\0'))
+            return answer;
 
-        printf("Invalid input! Please type only A, B, C or D.\n");
+        printf("Please enter only A, B, C or D.\n");
     }
-}
-
-static void saveTestResult(int studentID, int score, int total)
-{
-    FILE *fp;
-    float percentage = (total > 0) ? (score * 100.0f / total) : 0.0f;
-
-    fp = fopen(RESULTS_FILE, "a");
-    if (fp == NULL)
-    {
-        printf("Warning: could not save your result to file.\n");
-        return;
-    }
-
-    fprintf(fp, "%d|%d|%d|%.1f\n", studentID, score, total, percentage);
-    fclose(fp);
 }
 
 int takeTest(int studentID)
 {
-    int order[MAX_BANK];
-    char given[TEST_SIZE];
-    int bank, total, i, score = 0, q;
+    int order[MAX_QUESTIONS];
+    char answers[TEST_SIZE];
+    int total, i, score = 0, questionNumber;
     float percentage;
-    static int seeded = 0;
+    static int randomSeeded = 0;
 
-    printf("\n====== ENTRY TEST ======\n");
+    printf("\n========== ENTRY TEST ==========\n");
 
-    bank = questionCount;
-    if (bank > MAX_BANK)
-        bank = MAX_BANK;
-
-    if (bank <= 0)
+    if (questionCount == 0)
     {
-        printf("No questions are available yet. Please contact the admin.\n");
+        printf("No questions are available. Please contact the admin.\n");
         return -1;
     }
 
-    if (!seeded)
+    if (!randomSeeded)
     {
         srand((unsigned int)time(NULL));
-        seeded = 1;
+        randomSeeded = 1;
     }
 
-    for (i = 0; i < bank; i++)
+    for (i = 0; i < questionCount; i++)
         order[i] = i;
-    shuffle(order, bank);
 
-    total = (bank < TEST_SIZE) ? bank : TEST_SIZE;
+    shuffle(order, questionCount);
+
+    total = (questionCount < TEST_SIZE) ? questionCount : TEST_SIZE;
 
     printf("Student ID: %d\n", studentID);
-    printf("Total Questions: %d\n", total);
-    printf("Answer each question with A, B, C or D.\n");
+    printf("Total questions: %d\n", total);
+    printf("Choose A, B, C or D for each question.\n");
 
     for (i = 0; i < total; i++)
     {
-        q = order[i];
+        questionNumber = order[i];
 
         printf("\nQuestion %d of %d\n", i + 1, total);
-        printf("%s\n", questions[q]);
-        printf("A) %s\n", options[q][0]);
-        printf("B) %s\n", options[q][1]);
-        printf("C) %s\n", options[q][2]);
-        printf("D) %s\n", options[q][3]);
+        printf("%s\n", questions[questionNumber]);
+        printf("A) %s\n", options[questionNumber][0]);
+        printf("B) %s\n", options[questionNumber][1]);
+        printf("C) %s\n", options[questionNumber][2]);
+        printf("D) %s\n", options[questionNumber][3]);
 
-        given[i] = readAnswer();
+        answers[i] = readAnswer();
 
-        if (given[i] == 'X')
+        if (answers[i] == 'X')
         {
-            printf("\nInput closed. Test cancelled and not saved.\n");
+            printf("Test cancelled. No result was saved.\n");
             return -1;
         }
 
-        if (given[i] == correctAnswer[q])
+        if (answers[i] == correctAnswer[questionNumber])
             score++;
     }
 
-    percentage = score * 100.0f / total;
+    percentage = (score * 100.0f) / total;
 
-    printf("\n====== TEST RESULT ======\n");
+    printf("\n========== TEST RESULT ==========\n");
     printf("Score      : %d / %d\n", score, total);
     printf("Percentage : %.1f%%\n", percentage);
 
@@ -166,19 +133,19 @@ int takeTest(int studentID)
         printf("\n--- Review of wrong answers ---\n");
         for (i = 0; i < total; i++)
         {
-            q = order[i];
-            if (given[i] != correctAnswer[q])
+            questionNumber = order[i];
+            if (answers[i] != correctAnswer[questionNumber])
             {
-                printf("\n%s\n", questions[q]);
-                printf("Your answer   : %c\n", given[i]);
+                printf("\n%s\n", questions[questionNumber]);
+                printf("Your answer   : %c\n", answers[i]);
                 printf("Correct answer: %c) %s\n",
-                       correctAnswer[q],
-                       options[q][correctAnswer[q] - 'A']);
+                       correctAnswer[questionNumber],
+                       options[questionNumber][correctAnswer[questionNumber] - 'A']);
             }
         }
     }
 
-    saveTestResult(studentID, score, total);
+    saveResult(studentID, score, total);
     printf("\nYour result has been saved.\n");
 
     return score;
