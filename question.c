@@ -1,14 +1,51 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
 #include "question.h"
 
 #define QUESTIONS_FILE "questions.txt"
 
-char questions[MAX_QUESTIONS][200];
-char options[MAX_QUESTIONS][4][100];
-char correctAnswer[MAX_QUESTIONS];
+char (*questions)[200] = NULL;
+char (*options)[4][100] = NULL;
+char *correctAnswer = NULL;
 int questionCount = 0;
+
+static int allocateQuestionMemory(void)
+{
+    if (questions != NULL && options != NULL && correctAnswer != NULL)
+        return 1;
+
+    questions = malloc(MAX_QUESTIONS * sizeof(*questions));
+    options = malloc(MAX_QUESTIONS * sizeof(*options));
+    correctAnswer = malloc(MAX_QUESTIONS * sizeof(*correctAnswer));
+
+    if (questions == NULL || options == NULL || correctAnswer == NULL)
+    {
+        free(questions);
+        free(options);
+        free(correctAnswer);
+
+        questions = NULL;
+        options = NULL;
+        correctAnswer = NULL;
+        return 0;
+    }
+
+    return 1;
+}
+
+void freeQuestions(void)
+{
+    free(questions);
+    free(options);
+    free(correctAnswer);
+
+    questions = NULL;
+    options = NULL;
+    correctAnswer = NULL;
+    questionCount = 0;
+}
 
 static int readLine(char text[], int size)
 {
@@ -105,6 +142,9 @@ void saveQuestions(void)
     FILE *fp;
     int i, j;
 
+    if (questions == NULL || options == NULL || correctAnswer == NULL)
+        return;
+
     fp = fopen(QUESTIONS_FILE, "w");
     if (fp == NULL)
     {
@@ -128,6 +168,12 @@ void loadQuestions(void)
     FILE *fp;
     int i, j;
     char answer[10];
+
+    if (!allocateQuestionMemory())
+    {
+        printf("Unable to allocate memory for the question bank.\n");
+        return;
+    }
 
     fp = fopen(QUESTIONS_FILE, "r");
     if (fp == NULL)
@@ -178,6 +224,12 @@ void addquestion(void)
 {
     int i;
     char answer[20];
+
+    if (questions == NULL || options == NULL || correctAnswer == NULL)
+    {
+        printf("Question bank is not available due to a memory error.\n");
+        return;
+    }
 
     printf("\n========== ADD QUESTION ==========\n");
 
@@ -230,6 +282,12 @@ void viewquestion(void)
 {
     int i, j;
 
+    if (questions == NULL || options == NULL || correctAnswer == NULL)
+    {
+        printf("Question bank is not available.\n");
+        return;
+    }
+
     printf("\n========== QUESTION BANK ==========\n");
 
     if (questionCount == 0)
@@ -253,6 +311,12 @@ void editquestion(void)
     char newQuestion[200];
     char newOptions[4][100];
     char answer[20];
+
+    if (questions == NULL || options == NULL || correctAnswer == NULL)
+    {
+        printf("Question bank is not available.\n");
+        return;
+    }
 
     printf("\n========== EDIT QUESTION ==========\n");
 
@@ -312,6 +376,12 @@ void editquestion(void)
 void deletequestion(void)
 {
     int number, i;
+
+    if (questions == NULL || options == NULL || correctAnswer == NULL)
+    {
+        printf("Question bank is not available.\n");
+        return;
+    }
 
     printf("\n========== DELETE QUESTION ==========\n");
 
