@@ -55,5 +55,6 @@ int main(void)
         }
     } while (choice != 4);
 
+    freeQuestions();
     return 0;
 }
