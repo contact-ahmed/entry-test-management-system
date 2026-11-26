@@ -59,8 +59,8 @@ static char readAnswer(void)
 
 int takeTest(int studentID)
 {
-    int order[MAX_QUESTIONS];
-    char answers[TEST_SIZE];
+    int *order;
+    char *answers;
     int total, i, score = 0, questionNumber;
     float percentage;
     static int randomSeeded = 0;
@@ -70,6 +70,19 @@ int takeTest(int studentID)
     if (questionCount == 0)
     {
         printf("No questions are available. Please contact the admin.\n");
+        return -1;
+    }
+
+    total = (questionCount < TEST_SIZE) ? questionCount : TEST_SIZE;
+
+    order = malloc(questionCount * sizeof(int));
+    answers = calloc(total, sizeof(char));
+
+    if (order == NULL || answers == NULL)
+    {
+        printf("Unable to allocate memory for the test. Please try again.\n");
+        free(order);
+        free(answers);
         return -1;
     }
 
@@ -83,8 +96,6 @@ int takeTest(int studentID)
         order[i] = i;
 
     shuffle(order, questionCount);
-
-    total = (questionCount < TEST_SIZE) ? questionCount : TEST_SIZE;
 
     printf("Student ID: %d\n", studentID);
     printf("Total questions: %d\n", total);
@@ -106,6 +117,8 @@ int takeTest(int studentID)
         if (answers[i] == 'X')
         {
             printf("Test cancelled. No result was saved.\n");
+            free(order);
+            free(answers);
             return -1;
         }
 
@@ -147,6 +160,9 @@ int takeTest(int studentID)
 
     saveResult(studentID, score, total);
     printf("\nYour result has been saved.\n");
+
+    free(order);
+    free(answers);
 
     return score;
 }
